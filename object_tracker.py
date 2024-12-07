@@ -1,7 +1,6 @@
 import time
 import numpy as np
-from absl import app, flags, logging
-from absl.flags import FLAGS
+from absl import app
 import cv2
 # import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -16,16 +15,9 @@ from deep_sort.tracker import Tracker
 from tools import generate_detections as gdet
 # from PIL import Image
 
-flags.DEFINE_string('classes', './data/labels/coco.names', 'path to classes file')
-flags.DEFINE_string('weights', './weights/yolov3.tf',
-                    'path to weights file')
-flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
-flags.DEFINE_integer('size', 416, 'resize images to')
-flags.DEFINE_string('video', './data/video/test.mp4',
-                    'path to video file or number for webcam)')
-# flags.DEFINE_string('output', None, 'path to output video')
-# flags.DEFINE_string('output_format', 'XVID', 'codec used in VideoWriter when saving video to file')
-flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
+image_size =310
+num_classes=80
+weight_file='./weights/yolov3-tiny.tf'
 def main(_argv):
     # Definition of the parameters
     max_cosine_distance = 0.5
@@ -35,17 +27,17 @@ def main(_argv):
     encoder = gdet.create_box_encoder(model_filename, batch_size=1)
     metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
     tracker = Tracker(metric)
-    yolo = YoloV3Tiny(classes=FLAGS.num_classes)
+    yolo = YoloV3Tiny(classes=num_classes)
 
 
-    yolo.load_weights(FLAGS.weights)
-    logging.info('weights loaded')
+    yolo.load_weights(weight_file)
+    print('weights loaded')
 
 
     try:
-        vid = cv2.VideoCapture(int(FLAGS.video))
+        vid = cv2.VideoCapture(int('./data/video/test.mp4'))
     except:
-        vid = cv2.VideoCapture(FLAGS.video)
+        vid = cv2.VideoCapture('./data/video/test.mp4')
     
     fps = 0.0
     count = 0
@@ -58,7 +50,7 @@ def main(_argv):
         _, img = vid.read()
 
         if img is None:
-            logging.warning("Empty Frame")
+            print("Empty Frame")
             time.sleep(0.1)
             count+=1
             if count < 3:
@@ -67,7 +59,7 @@ def main(_argv):
                 break
         img_in = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img_in = tf.expand_dims(img_in, 0)
-        img_in = transform_images(img_in, FLAGS.size)
+        img_in = transform_images(img_in, image_size)
 
         t1 = time.time()
         boxes, scores, classes, nums = yolo.predict(img_in)
@@ -88,8 +80,6 @@ def main(_argv):
 
             cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 2)
             cv2.putText(img, 'person' + "-" + str(track.track_id),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
-            
-
         # print fps on screen 
         fps  = ( fps + (1./(time.time()-t1)) ) / 2
         cv2.putText(img, "FPS: {:.2f}".format(fps), (0, 30),
