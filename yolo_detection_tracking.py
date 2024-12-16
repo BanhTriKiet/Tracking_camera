@@ -4,7 +4,7 @@ import time
 from yolo_detector import YoloDetector
 from tracker import Tracker
 
-MODEL_PATH = "models/best.pt"
+MODEL_PATH = "models/test.pt"
 VIDEO_PATH = "assets/test.mp4"
 
 
